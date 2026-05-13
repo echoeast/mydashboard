@@ -177,7 +177,7 @@ export function Sidebar({ className, defaultCollapsed = false }: SidebarProps) {
                                                         JD
                                                     </div>
                                                     <div className="flex-1 overflow-hidden">
-                                                        <p className="text-sm font-medium truncate">John Doe</p>
+                                                        <p className="text-sm font-medium truncate">Joseph Doe</p>
                                                         <p className="text-xs text-muted-foreground truncate">john@example.com</p>
                                                     </div>
                                                 </div>
@@ -356,7 +356,7 @@ export function Sidebar({ className, defaultCollapsed = false }: SidebarProps) {
                                                 JD
                                             </div>
                                             <div className="flex-1 overflow-hidden">
-                                                <p className="text-sm font-medium truncate">John Doe</p>
+                                                <p className="text-sm font-medium truncate">Joseph Doe</p>
                                                 <p className="text-xs text-muted-foreground truncate">john@example.com</p>
                                             </div>
                                         </div>
@@ -385,7 +385,7 @@ export function Sidebar({ className, defaultCollapsed = false }: SidebarProps) {
                                     </TooltipTrigger>
                                     <TooltipContent side="right">
                                         <div>
-                                            <p className="text-sm font-medium">John Doe</p>
+                                            <p className="text-sm font-medium">Joseph Doe</p>
                                             <p className="text-xs text-muted-foreground">john@example.com</p>
                                         </div>
                                     </TooltipContent>
