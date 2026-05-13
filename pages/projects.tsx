@@ -1,17 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import {
   PlusIcon,
   XIcon,
-  CheckCircle2Icon,
-  CircleDotIcon,
-  CircleIcon,
   TrashIcon,
   EditIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
   FolderKanbanIcon,
+  ArrowRightIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,23 +51,12 @@ const statusLabels: Record<string, string> = {
   on_hold: "On Hold",
 };
 
-const milestoneStatusIcon = (status: string) => {
-  switch (status) {
-    case "completed":
-      return <CheckCircle2Icon className="w-4 h-4 text-green-500" />;
-    case "in_progress":
-      return <CircleDotIcon className="w-4 h-4 text-blue-500" />;
-    default:
-      return <CircleIcon className="w-4 h-4 text-neutral-400" />;
-  }
-};
-
 export default function Projects() {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [newProject, setNewProject] = useState({
     name: "",
     description: "",
@@ -85,25 +71,15 @@ export default function Projects() {
 
   async function fetchProjects() {
     setLoading(true);
-    const { data: projectsData, error: projectsError } = await getSupabase()
+    const { data: projectsData } = await getSupabase()
       .from("projects")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (projectsError) {
-      console.error("Error fetching projects:", projectsError);
-      setLoading(false);
-      return;
-    }
-
-    const { data: milestonesData, error: milestonesError } = await getSupabase()
+    const { data: milestonesData } = await getSupabase()
       .from("milestones")
       .select("*")
       .order("order_index", { ascending: true });
-
-    if (milestonesError) {
-      console.error("Error fetching milestones:", milestonesError);
-    }
 
     const projectsWithMilestones = (projectsData || []).map((p: any) => ({
       ...p,
@@ -132,14 +108,11 @@ export default function Projects() {
       .select()
       .single();
 
-    if (error) {
-      console.error("Error creating project:", error);
-      return;
-    }
+    if (error) return;
 
     const validMilestones = milestoneInputs.filter((m) => m.trim());
     if (validMilestones.length > 0) {
-      const { error: msError } = await getSupabase().from("milestones").insert(
+      await getSupabase().from("milestones").insert(
         validMilestones.map((title, i) => ({
           project_id: project.id,
           title,
@@ -147,7 +120,6 @@ export default function Projects() {
           order_index: i,
         }))
       );
-      if (msError) console.error("Error creating milestones:", msError);
     }
 
     setIsDrawerOpen(false);
@@ -159,7 +131,7 @@ export default function Projects() {
   async function handleUpdateProject() {
     if (!editingProject) return;
 
-    const { error } = await getSupabase()
+    await getSupabase()
       .from("projects")
       .update({
         name: newProject.name,
@@ -169,12 +141,6 @@ export default function Projects() {
       })
       .eq("id", editingProject.id);
 
-    if (error) {
-      console.error("Error updating project:", error);
-      return;
-    }
-
-    // Delete old milestones and re-insert
     await getSupabase().from("milestones").delete().eq("project_id", editingProject.id);
 
     const validMilestones = milestoneInputs.filter((m) => m.trim());
@@ -197,20 +163,10 @@ export default function Projects() {
   }
 
   async function handleDeleteProject(id: string) {
+    await getSupabase().from("tasks").delete().eq("project_id", id);
+    await getSupabase().from("phases").delete().eq("project_id", id);
     await getSupabase().from("milestones").delete().eq("project_id", id);
     await getSupabase().from("projects").delete().eq("id", id);
-    fetchProjects();
-  }
-
-  async function cycleMilestoneStatus(milestone: Milestone) {
-    const next: Record<string, string> = {
-      pending: "in_progress",
-      in_progress: "completed",
-      completed: "pending",
-    };
-    const newStatus = next[milestone.status];
-
-    await getSupabase().from("milestones").update({ status: newStatus }).eq("id", milestone.id);
     fetchProjects();
   }
 
@@ -223,9 +179,7 @@ export default function Projects() {
       status: project.status,
     });
     setMilestoneInputs(
-      project.milestones.length > 0
-        ? project.milestones.map((m) => m.title)
-        : [""]
+      project.milestones.length > 0 ? project.milestones.map((m) => m.title) : [""]
     );
     setIsDrawerOpen(true);
   }
@@ -272,13 +226,12 @@ export default function Projects() {
           <div className="space-y-3">
             {projects.map((project) => {
               const progress = getProgress(project.milestones);
-              const isExpanded = expandedProject === project.id;
 
               return (
-                <Card key={project.id} className="border-none p-0 overflow-hidden">
+                <Card key={project.id} className="border-none p-0 overflow-hidden group">
                   <div
                     className="flex items-center gap-4 p-5 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors"
-                    onClick={() => setExpandedProject(isExpanded ? null : project.id)}
+                    onClick={() => router.push(`/projects/${project.id}`)}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -322,62 +275,10 @@ export default function Projects() {
                         >
                           <TrashIcon className="h-4 w-4" />
                         </Button>
-                        {isExpanded ? (
-                          <ChevronUpIcon className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
-                        )}
+                        <ArrowRightIcon className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </div>
                   </div>
-
-                  <AnimatePresence>
-                    {isExpanded && project.milestones.length > 0 && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="px-5 pb-5 pt-0 border-t border-neutral-200 dark:border-neutral-800">
-                          <p className="text-xs text-muted-foreground mb-3 pt-4">Milestones</p>
-                          <div className="space-y-2">
-                            {project.milestones.map((milestone) => (
-                              <div
-                                key={milestone.id}
-                                className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-900/50 cursor-pointer transition-colors"
-                                onClick={() => cycleMilestoneStatus(milestone)}
-                              >
-                                {milestoneStatusIcon(milestone.status)}
-                                <span
-                                  className={`text-sm flex-1 ${
-                                    milestone.status === "completed"
-                                      ? "line-through text-muted-foreground"
-                                      : ""
-                                  }`}
-                                >
-                                  {milestone.title}
-                                </span>
-                                <Badge
-                                  variant="outline"
-                                  className={`text-xs ${
-                                    milestone.status === "completed"
-                                      ? "bg-green-500/10 text-green-600 border-green-500/30"
-                                      : milestone.status === "in_progress"
-                                      ? "bg-blue-500/10 text-blue-600 border-blue-500/30"
-                                      : "bg-neutral-500/10 text-neutral-500 border-neutral-500/30"
-                                  }`}
-                                >
-                                  {milestone.status.replace("_", " ")}
-                                </Badge>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </Card>
               );
             })}
@@ -385,7 +286,6 @@ export default function Projects() {
         )}
       </div>
 
-      {/* Drawer for adding/editing project */}
       <AnimatePresence>
         {isDrawerOpen && (
           <>
@@ -481,6 +381,7 @@ export default function Projects() {
 
                   <div>
                     <label className="text-sm font-medium mb-2 block">Milestones</label>
+                    <p className="text-xs text-muted-foreground mb-2">Key goals for this project. Add phases and detailed tasks on the project page.</p>
                     <div className="space-y-2">
                       {milestoneInputs.map((ms, i) => (
                         <div key={i} className="flex gap-2">

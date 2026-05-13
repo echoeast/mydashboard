@@ -1,17 +1,29 @@
 "use client";
 
-import { TrendingUpIcon, ArrowRightIcon, Sparkles } from "lucide-react";
+import { TrendingUpIcon, ArrowRightIcon, Sparkles, CheckCircle2Icon, CircleDotIcon, CircleIcon, ClockIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import Link from "next/link";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/router";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { statsCards, revenueData, recentUsers, checkoutConversionData } from '@/lib/mockData';
 import { motion, AnimatePresence } from "framer-motion";
 import { XIcon } from "lucide-react";
+import { getSupabase } from "@/lib/supabase";
+
+interface TodayTask {
+  id: string;
+  project_id: string;
+  title: string;
+  status: "todo" | "in_progress" | "done";
+  start_at: string | null;
+  duration_minutes: number | null;
+  project_name?: string;
+}
 
 interface HomeProps {
   isMiddleChatVisible?: boolean;
@@ -19,8 +31,59 @@ interface HomeProps {
 }
 
 export default function Home({ isMiddleChatVisible = false, setIsMiddleChatVisible }: HomeProps) {
+  const router = useRouter();
   const [timeRange, setTimeRange] = useState<'30' | '90'>('90');
   const [isAIDrawerOpen, setIsAIDrawerOpen] = useState(false);
+  const [todayTasks, setTodayTasks] = useState<TodayTask[]>([]);
+
+  useEffect(() => {
+    fetchTodayTasks();
+  }, []);
+
+  async function fetchTodayTasks() {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+
+    const supabase = getSupabase();
+    const { data } = await supabase
+      .from("tasks")
+      .select("*, projects(name)")
+      .gte("start_at", start.toISOString())
+      .lte("start_at", end.toISOString())
+      .order("start_at");
+
+    if (data) {
+      setTodayTasks(
+        data.map((t: any) => ({
+          ...t,
+          project_name: t.projects?.name,
+        }))
+      );
+    }
+  }
+
+  async function toggleTaskStatus(task: TodayTask) {
+    const next: Record<TodayTask["status"], TodayTask["status"]> = {
+      todo: "in_progress",
+      in_progress: "done",
+      done: "todo",
+    };
+    await getSupabase().from("tasks").update({ status: next[task.status] }).eq("id", task.id);
+    fetchTodayTasks();
+  }
+
+  const taskStatusIcon = (status: string) => {
+    switch (status) {
+      case "done":
+        return <CheckCircle2Icon className="w-4 h-4 text-green-500" />;
+      case "in_progress":
+        return <CircleDotIcon className="w-4 h-4 text-blue-500" />;
+      default:
+        return <CircleIcon className="w-4 h-4 text-neutral-400" />;
+    }
+  };
 
   // Filter data based on selected time range
   const filteredData = useMemo(() => {
@@ -79,7 +142,62 @@ export default function Home({ isMiddleChatVisible = false, setIsMiddleChatVisib
       </div>
 
       <div className="max-w-7xl w-full mx-auto flex-1 p-8">
-       
+
+        {/* Today's Tasks */}
+        <Card className="p-0 border-none mb-2 overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200 dark:border-neutral-800">
+            <div className="flex items-center gap-2">
+              <ClockIcon className="w-4 h-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold">Today's Tasks</h2>
+              <Badge variant="outline" className="text-xs">
+                {todayTasks.filter((t) => t.status !== "done").length} pending
+              </Badge>
+            </div>
+            <Link href="/projects" className="flex flex-row items-center gap-1 text-xs">
+              View All Projects
+              <ArrowRightIcon className="w-3 h-3 ml-1" />
+            </Link>
+          </div>
+          {todayTasks.length === 0 ? (
+            <p className="p-8 text-sm text-muted-foreground text-center">
+              No tasks scheduled for today.
+            </p>
+          ) : (
+            <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
+              {todayTasks.map((t) => (
+                <div
+                  key={t.id}
+                  className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors"
+                >
+                  <button
+                    onClick={() => toggleTaskStatus(t)}
+                    className="flex-shrink-0 cursor-pointer"
+                  >
+                    {taskStatusIcon(t.status)}
+                  </button>
+                  <div
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={() => router.push(`/projects/${t.project_id}`)}
+                  >
+                    <p className={`text-sm font-medium ${t.status === "done" ? "line-through text-muted-foreground" : ""}`}>
+                      {t.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t.project_name && <span>{t.project_name} · </span>}
+                      {t.start_at && (
+                        <>
+                          {new Date(t.start_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                          {t.duration_minutes && ` · ${t.duration_minutes}min`}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
           {statsCards.map((stat) => (
