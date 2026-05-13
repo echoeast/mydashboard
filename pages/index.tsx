@@ -64,7 +64,7 @@ export default function Home({ isMiddleChatVisible = false, setIsMiddleChatVisib
   return (
     <>
       <div className='w-full sticky top-0 z-50 bg-white dark:bg-neutral-950 flex-shrink-0 flex flex-row h-16 items-center px-8 border-b border-neutral-200 dark:border-neutral-800'>
-        <h1 className='text-lg font-bold'>Welcome back, John</h1>
+        <h1 className='text-lg font-bold'>Welcome back, Joseph</h1>
         <div className="ml-auto">
           <Button
             variant="outline"
