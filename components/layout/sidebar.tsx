@@ -11,6 +11,7 @@ import {
     TrendingUpIcon,
     MailIcon,
     ShoppingCartIcon,
+    FolderKanbanIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +49,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
     { label: "Dashboard", icon: HomeIcon, href: "/" },
+    { label: "Projects", icon: FolderKanbanIcon, href: "/projects" },
     { label: "Products", icon: ShoppingCartIcon, href: "/products" },
     { label: "Users", icon: UsersIcon, href: "/users", badge: 3 },
     { label: "Marketing", icon: MailIcon, href: "/marketing" },
