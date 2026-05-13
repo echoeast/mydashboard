@@ -9,7 +9,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
 
   // Pages where sidebar should be hidden
-  const pagesWithoutSidebar = ['/login', '/signup', '/forgot-password'];
+  const pagesWithoutSidebar = ['/login', '/signup', '/forgot-password', '/r/[id]'];
   const hideSidebar = pagesWithoutSidebar.includes(router.pathname);
 
   if (hideSidebar) {

@@ -13,6 +13,8 @@ import {
     ShoppingCartIcon,
     FolderKanbanIcon,
     WalletIcon,
+    SearchIcon,
+    FileTextIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,6 +54,8 @@ const navItems: NavItem[] = [
     { label: "Dashboard", icon: HomeIcon, href: "/" },
     { label: "Projects", icon: FolderKanbanIcon, href: "/projects" },
     { label: "Finances", icon: WalletIcon, href: "/finances" },
+    { label: "Research", icon: SearchIcon, href: "/research" },
+    { label: "Reports", icon: FileTextIcon, href: "/reports" },
     { label: "Products", icon: ShoppingCartIcon, href: "/products" },
     { label: "Users", icon: UsersIcon, href: "/users", badge: 3 },
     { label: "Marketing", icon: MailIcon, href: "/marketing" },
